@@ -16,5 +16,5 @@
     "tests/**/*.ts",
     "tests-vibed/**/*.ts",
     "playwright.config.ts"
-  ]
+, "test-vibed/edit-bug.spec.ts", "test-vibed/create-bug.spec.ts"  ]
 }
