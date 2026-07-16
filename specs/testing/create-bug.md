@@ -30,6 +30,11 @@ This test plan covers end-to-end flows for creating a new bug in the BuggyBoard 
 8. Test that clicking outside the modal does not close it and that field values remain.
 9. Remove required values one by one and confirm validation prevents save.
 
+## Suite: Create Bug
+
+### Seed
+- `test/seed.spec.ts`
+ 
 ## Test Cases
 
 ### 1. Open create bug modal from board page
