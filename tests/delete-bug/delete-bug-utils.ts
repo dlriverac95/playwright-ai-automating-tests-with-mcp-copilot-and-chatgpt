@@ -1,25 +1,17 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { type Page, type APIRequestContext, expect } from '@playwright/test';
+import { type APIRequestContext, expect } from '@playwright/test';
+import { LoginPage, firstSeededUser } from '../pages/LoginPage';
+import type { Page } from '@playwright/test';
 
-const usersPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../users.json');
-const users = JSON.parse(readFileSync(usersPath, 'utf8')) as Array<{ username: string; password: string }>;
-
-export function firstSeededUser() {
-  return users[0];
-}
-
-export async function loginToBoard(page: Page) {
+export async function loginToBoard(loginPage: LoginPage, boardPage: { expectLoaded: () => Promise<void> }) {
   const firstUser = firstSeededUser();
 
-  await page.goto('/login');
-  await page.getByLabel('Username').fill(firstUser.username);
-  await page.getByLabel('Password').fill(firstUser.password);
-  await page.getByRole('button', { name: 'Login' }).click();
+  await loginPage.goto();
+  await loginPage.login(firstUser.username, firstUser.password);
+  await boardPage.expectLoaded();
 
-  await expect(page).toHaveURL(/\/board/);
-  await expect(page.getByRole('table', { name: 'Bugs' })).toBeVisible();
   return firstUser;
 }
 
