@@ -33,4 +33,11 @@ test.describe('Delete Bug - Fresh Bug Deletion', () => {
 
     createdBugId = undefined;
   });
+
+  test('Canceling deletion keeps the bug on the board and leaves the modal open', async ({ boardPage }) => {
+    const editModal = await boardPage.openEditBugModalForTitle(bugTitle);
+
+    await editModal.cancelDelete();
+    await boardPage.expectBugVisible(bugTitle);
+  });
 });

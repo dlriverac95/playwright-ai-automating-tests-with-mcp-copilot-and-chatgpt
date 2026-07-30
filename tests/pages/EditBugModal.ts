@@ -19,7 +19,23 @@ export class EditBugModal {
 
   async delete() {
     await this.dialog.getByRole('button', { name: 'Delete' }).click();
+
+    const confirmDialog = this.page.getByRole('dialog', { name: 'Confirm deletion' });
+    await expect(confirmDialog).toBeVisible();
+    await confirmDialog.getByRole('button', { name: 'Delete' }).click();
+
     await expect(this.dialog).not.toBeVisible();
+  }
+
+  async cancelDelete() {
+    await this.dialog.getByRole('button', { name: 'Delete' }).click();
+
+    const confirmDialog = this.page.getByRole('dialog', { name: 'Confirm deletion' });
+    await expect(confirmDialog).toBeVisible();
+    await confirmDialog.getByRole('button', { name: 'Cancel' }).click();
+
+    await expect(confirmDialog).not.toBeVisible();
+    await expect(this.dialog).toBeVisible();
   }
 
   async cancel() {

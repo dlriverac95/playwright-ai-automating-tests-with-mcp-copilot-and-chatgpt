@@ -50,6 +50,7 @@ export function EditBugModal({ bug, onClose, onSaved }: EditBugModalProps) {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   const isOpen = bug !== null;
@@ -64,6 +65,7 @@ export function EditBugModal({ bug, onClose, onSaved }: EditBugModalProps) {
       setValidationErrors([]);
       setLoading(false);
       setDeleting(false);
+      setConfirmDeleteOpen(false);
       queueMicrotask(() => titleInputRef.current?.focus());
     }
   }, [bug]);
@@ -82,12 +84,12 @@ export function EditBugModal({ bug, onClose, onSaved }: EditBugModalProps) {
 
   const initial = bug
     ? {
-        title: bug.title,
-        severity: toLowerSeverity(bug.severity),
-        state: toLowerState(bug.state),
-        owner: bug.owner,
-        description: bug.description,
-      }
+      title: bug.title,
+      severity: toLowerSeverity(bug.severity),
+      state: toLowerState(bug.state),
+      owner: bug.owner,
+      description: bug.description,
+    }
     : null;
 
   const current = {
@@ -160,16 +162,27 @@ export function EditBugModal({ bug, onClose, onSaved }: EditBugModalProps) {
   }
 
   function handleCancel() {
+    if (confirmDeleteOpen) {
+      setConfirmDeleteOpen(false);
+      return;
+    }
     onClose();
   }
 
-  async function handleDelete() {
+  function handleDeleteClick() {
+    if (!bug || deleting || loading) return;
+    setConfirmDeleteOpen(true);
+    setValidationErrors([]);
+  }
+
+  async function handleConfirmDelete() {
     if (!bug || deleting || loading) return;
     setDeleting(true);
     setValidationErrors([]);
     try {
       const res = await fetch(`/api/bugs/${bug.id}`, { method: "DELETE" });
       if (res.ok) {
+        setConfirmDeleteOpen(false);
         onSaved();
         onClose();
         return;
@@ -193,151 +206,185 @@ export function EditBugModal({ bug, onClose, onSaved }: EditBugModalProps) {
       aria-labelledby="edit-bug-modal-title"
     >
       <div className="flex min-h-full items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-lg border border-stone-200">
-        <div className="flex items-center justify-between gap-2 px-6 py-4 border-b border-stone-200">
-          <h2 id="edit-bug-modal-title" className="text-lg font-semibold text-stone-800">
-            Edit bug #{bug.id}
-          </h2>
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="rounded p-1 text-stone-500 hover:bg-stone-100 hover:text-stone-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-            aria-label="Close"
-          >
-            <span className="sr-only">Close</span>
-            <span aria-hidden="true">×</span>
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
-          <div>
-            <label htmlFor="edit-bug-id" className="block text-sm font-medium text-stone-700 mb-1">
-              ID
-            </label>
-            <input
-              id="edit-bug-id"
-              type="text"
-              value={bug.id}
-              readOnly
-              className="w-full rounded border border-stone-200 px-3 py-2 text-stone-500 bg-stone-50 font-mono cursor-not-allowed"
-              aria-readonly="true"
-            />
-          </div>
-          <div>
-            <label htmlFor="edit-bug-title" className="block text-sm font-medium text-stone-700 mb-1">
-              Title
-            </label>
-            <input
-              id="edit-bug-title"
-              ref={titleInputRef}
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded border border-stone-300 px-3 py-2 text-stone-800 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              disabled={loading}
-              autoComplete="off"
-            />
-          </div>
-          <div>
-            <label htmlFor="edit-bug-severity" className="block text-sm font-medium text-stone-700 mb-1">
-              Severity
-            </label>
-            <select
-              id="edit-bug-severity"
-              value={severity}
-              onChange={(e) => setSeverity(e.target.value as Severity)}
-              className={`w-full rounded border border-stone-300 px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${severitySelectClass(severity)}`}
-              disabled={loading}
-            >
-              {SEVERITIES.map((s) => (
-                <option key={s} value={s}>
-                  {s.toUpperCase()}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="edit-bug-state" className="block text-sm font-medium text-stone-700 mb-1">
-              State
-            </label>
-            <select
-              id="edit-bug-state"
-              value={state}
-              onChange={(e) => setState(e.target.value as BugState)}
-              className="w-full rounded border border-stone-300 px-3 py-2 text-stone-800 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              disabled={loading}
-            >
-              {BUG_STATES.map((s) => (
-                <option key={s} value={s}>
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="edit-bug-owner" className="block text-sm font-medium text-stone-700 mb-1">
-              Owner
-            </label>
-            <input
-              id="edit-bug-owner"
-              type="text"
-              value={owner}
-              onChange={(e) => setOwner(e.target.value)}
-              className="w-full rounded border border-stone-300 px-3 py-2 text-stone-800 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              disabled={loading}
-              autoComplete="off"
-            />
-          </div>
-          <div>
-            <label htmlFor="edit-bug-description" className="block text-sm font-medium text-stone-700 mb-1">
-              Description
-            </label>
-            <textarea
-              id="edit-bug-description"
-              rows={4}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded border border-stone-300 px-3 py-2 text-stone-800 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-y"
-              disabled={loading}
-              autoComplete="off"
-            />
-          </div>
-          {validationErrors.length > 0 && (
-            <ul className="text-sm text-red-600" role="alert">
-              {validationErrors.map((msg, i) => (
-                <li key={i}>{msg}</li>
-              ))}
-            </ul>
-          )}
-          <div className="flex gap-3 justify-between pt-2">
+        <div className="bg-white rounded-lg shadow-lg w-full max-w-lg border border-stone-200">
+          <div className="flex items-center justify-between gap-2 px-6 py-4 border-b border-stone-200">
+            <h2 id="edit-bug-modal-title" className="text-lg font-semibold text-stone-800">
+              Edit bug #{bug.id}
+            </h2>
             <button
               type="button"
-              onClick={handleDelete}
-              className="rounded px-4 py-2 text-sm font-medium text-red-700 border border-red-200 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading || deleting}
+              onClick={handleCancel}
+              className="rounded p-1 text-stone-500 hover:bg-stone-100 hover:text-stone-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+              aria-label="Close"
             >
-              {deleting ? "Deleting…" : "Delete"}
+              <span className="sr-only">Close</span>
+              <span aria-hidden="true">×</span>
             </button>
-            <div className="flex gap-3">
+          </div>
+          <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
+            <div>
+              <label htmlFor="edit-bug-id" className="block text-sm font-medium text-stone-700 mb-1">
+                ID
+              </label>
+              <input
+                id="edit-bug-id"
+                type="text"
+                value={bug.id}
+                readOnly
+                className="w-full rounded border border-stone-200 px-3 py-2 text-stone-500 bg-stone-50 font-mono cursor-not-allowed"
+                aria-readonly="true"
+              />
+            </div>
+            <div>
+              <label htmlFor="edit-bug-title" className="block text-sm font-medium text-stone-700 mb-1">
+                Title
+              </label>
+              <input
+                id="edit-bug-title"
+                ref={titleInputRef}
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full rounded border border-stone-300 px-3 py-2 text-stone-800 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                disabled={loading}
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <label htmlFor="edit-bug-severity" className="block text-sm font-medium text-stone-700 mb-1">
+                Severity
+              </label>
+              <select
+                id="edit-bug-severity"
+                value={severity}
+                onChange={(e) => setSeverity(e.target.value as Severity)}
+                className={`w-full rounded border border-stone-300 px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${severitySelectClass(severity)}`}
+                disabled={loading}
+              >
+                {SEVERITIES.map((s) => (
+                  <option key={s} value={s}>
+                    {s.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="edit-bug-state" className="block text-sm font-medium text-stone-700 mb-1">
+                State
+              </label>
+              <select
+                id="edit-bug-state"
+                value={state}
+                onChange={(e) => setState(e.target.value as BugState)}
+                className="w-full rounded border border-stone-300 px-3 py-2 text-stone-800 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                disabled={loading}
+              >
+                {BUG_STATES.map((s) => (
+                  <option key={s} value={s}>
+                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="edit-bug-owner" className="block text-sm font-medium text-stone-700 mb-1">
+                Owner
+              </label>
+              <input
+                id="edit-bug-owner"
+                type="text"
+                value={owner}
+                onChange={(e) => setOwner(e.target.value)}
+                className="w-full rounded border border-stone-300 px-3 py-2 text-stone-800 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                disabled={loading}
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <label htmlFor="edit-bug-description" className="block text-sm font-medium text-stone-700 mb-1">
+                Description
+              </label>
+              <textarea
+                id="edit-bug-description"
+                rows={4}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full rounded border border-stone-300 px-3 py-2 text-stone-800 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-y"
+                disabled={loading}
+                autoComplete="off"
+              />
+            </div>
+            {validationErrors.length > 0 && (
+              <ul className="text-sm text-red-600" role="alert">
+                {validationErrors.map((msg, i) => (
+                  <li key={i}>{msg}</li>
+                ))}
+              </ul>
+            )}
+            <div className="flex gap-3 justify-between pt-2">
               <button
                 type="button"
-                onClick={handleCancel}
-                className="rounded px-4 py-2 text-sm font-medium text-stone-700 bg-stone-200 hover:bg-stone-300 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
+                onClick={handleDeleteClick}
+                className="rounded px-4 py-2 text-sm font-medium text-red-700 border border-red-200 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={loading || deleting}
+              >
+                {deleting ? "Deleting…" : "Delete"}
+              </button>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="rounded px-4 py-2 text-sm font-medium text-stone-700 bg-stone-200 hover:bg-stone-300 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
+                  disabled={loading || deleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded px-4 py-2 text-sm font-medium text-stone-800 bg-primary hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={saveDisabled || deleting}
+                >
+                  {loading ? "Saving…" : "Save"}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+      {confirmDeleteOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-stone-900/60 p-4">
+          <div
+            className="w-full max-w-md rounded-lg border border-stone-200 bg-white p-6 shadow-lg"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-delete-title"
+          >
+            <h3 id="confirm-delete-title" className="text-lg font-semibold text-stone-800">
+              Confirm deletion
+            </h3>
+            <p className="mt-3 text-sm text-stone-600">
+              This action will permanently remove this bug from the board.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteOpen(false)}
+                className="rounded px-4 py-2 text-sm font-medium text-stone-700 bg-stone-200 hover:bg-stone-300 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
               >
                 Cancel
               </button>
               <button
-                type="submit"
-                className="rounded px-4 py-2 text-sm font-medium text-stone-800 bg-primary hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={saveDisabled || deleting}
-            >
-              {loading ? "Saving…" : "Save"}
+                type="button"
+                onClick={handleConfirmDelete}
+                className="rounded px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={deleting}
+              >
+                {deleting ? "Deleting…" : "Delete"}
               </button>
             </div>
           </div>
-        </form>
-      </div>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
